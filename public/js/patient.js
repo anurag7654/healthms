@@ -1,21 +1,22 @@
 /* ================================================================
-   HealthMS — Patient Dashboard (Fixed & AI-Enhanced)[cite: 3, 5]
+   HealthMS — Patient Dashboard (Fixed & AI-Enhanced)
    ================================================================ */
 
 'use strict';
 
 let patientCharts = {};
+let bookDoctors = [];
 
 async function initPatient() {
-  const user = Session.user();[cite: 5]
-  if (!user || user.role !== 'patient') { window.location.href = '/'; return; }[cite: 5]
+  const user = Session.user();
+  if (!user || user.role !== 'patient') { window.location.href = '/'; return; }
 
-  Theme.init();[cite: 5]
-  fillSidebarProfile(user);[cite: 5]
-  initNav();[cite: 5]
-  navigateTo('overview');[cite: 5]
+  Theme.init();
+  fillSidebarProfile(user);
+  initNav();
+  navigateTo('overview');
 
-  // Load overview data[cite: 5]
+  // Load overview data
   await Promise.all([
     loadPatientStats(),
     loadOverviewVitals(),
@@ -23,10 +24,10 @@ async function initPatient() {
     loadOverviewMedicines(),
   ]);
 
-  // View lazy-loading[cite: 5]
+  // View lazy-loading
   document.querySelectorAll('.nav-link[data-view]').forEach(link => {
     link.addEventListener('click', async () => {
-      const v = link.dataset.view;[cite: 5]
+      const v = link.dataset.view;
       if (v === 'appointments')  await loadAllAppointments();
       if (v === 'medicines')     await loadMedicines();
       if (v === 'records')       await loadHealthRecords();
@@ -35,115 +36,233 @@ async function initPatient() {
     });
   });
 
-  wireBookAppointment();[cite: 5]
-  wireAddMedicine();[cite: 5]
-  wireAddRecord();[cite: 5]
-  wireProfileForm();[cite: 5]
+  wireBookAppointment();
+  wireAddMedicine();
+  wireAddRecord();
+  wireProfileForm();
 }
 
-/* ── APPOINTMENT FUNCTIONS (FIXED)[cite: 3, 5] ────────────────── */
+/* ── APPOINTMENT FUNCTIONS (FIXED) ────────────────── */
 
 async function openBookModal() {
   try {
-    const doctors = await API.get('/users?role=doctor');[cite: 3, 5]
-    const datalist = document.getElementById('doctor-list');[cite: 3, 4]
+    const doctors = await API.get('/users?role=doctor');
+    bookDoctors = doctors;
+    const datalist = document.getElementById('doctor-list');
     if (datalist) {
-      datalist.innerHTML = doctors.map(d => `<option value="${esc(d.name)}">`).join('');[cite: 3, 5]
+      datalist.innerHTML = doctors.map(d => `<option value="${esc(d.name)}">`).join('');
     }
-  } catch(e) { console.warn("Manual entry active."); }[cite: 3]
+  } catch(e) {
+    console.warn("Manual entry active.", e);
+    toast('Could not load doctor list. Enter a name manually.', 'warning');
+  }
   
-  const dateInput = document.getElementById('book-date');[cite: 5]
-  if (dateInput) { dateInput.min = today(); if (!dateInput.value) dateInput.value = today(); }[cite: 5]
-  openModal('modal-book-appt');[cite: 3, 5]
+  const dateInput = document.getElementById('book-date');
+  if (dateInput) { dateInput.min = today(); if (!dateInput.value) dateInput.value = today(); }
+  openModal('modal-book-appt');
 }
 
 function wireBookAppointment() {
-  document.addEventListener('click', e => {
-    if (e.target.closest('[data-open-book]')) openBookModal();[cite: 5]
+  document.querySelectorAll('[data-open-book]').forEach(btn => {
+    btn.addEventListener('click', async e => {
+      e.preventDefault();
+      await openBookModal();
+    });
   });
 
   document.getElementById('form-book-appt')?.addEventListener('submit', async e => {
-    e.preventDefault();[cite: 5]
-    const btn = e.target.querySelector('[type=submit]');[cite: 5]
-    btn.classList.add('loading');[cite: 5]
+    e.preventDefault();
+    const btn = document.querySelector('[type=submit][form="form-book-appt"]') || e.target.querySelector('[type=submit]');
+    if (btn) btn.classList.add('loading');
     try {
-      // Collect manual name from text input[cite: 3, 5]
-      const doctorName = document.getElementById('book-doctor').value.trim();[cite: 4, 5]
-      const date       = document.getElementById('book-date').value;[cite: 5]
-      const time       = document.getElementById('book-time').value;[cite: 5]
-      const reason     = document.getElementById('book-reason').value.trim();[cite: 5]
+      // Collect manual name from text input
+      const doctorName = document.getElementById('book-doctor').value.trim();
+      const date       = document.getElementById('book-date').value;
+      const time       = document.getElementById('book-time').value;
+      const reason     = document.getElementById('book-reason').value.trim();
 
-      if (!doctorName) { toast('Enter doctor name', 'error'); return; }[cite: 5]
+      if (!doctorName) { toast('Enter doctor name', 'error'); return; }
+      if (!date || !time || !reason) { toast('Please fill all fields', 'error'); return; }
 
-      await API.post('/appointments', { doctorName, date, time, reason });[cite: 3, 5]
+      const normalizedDoctorName = doctorName.toLowerCase();
+      const doctor = bookDoctors.find(d => d.name.toLowerCase().trim() === normalizedDoctorName);
+      const payload = { date, time, reason };
+      if (doctor) payload.doctorId = doctor.id;
+      else payload.doctorName = doctorName;
 
-      closeModal('modal-book-appt');[cite: 3, 5]
-      e.target.reset();[cite: 5]
-      toast('🎉 Appointment booked!', 'success');[cite: 5]
-      await loadUpcomingAppointments();[cite: 5]
+      await API.post('/appointments', payload);
+
+      closeModal('modal-book-appt');
+      e.target.reset();
+      toast('🎉 Appointment booked!', 'success');
+      await loadUpcomingAppointments();
     } catch(err) {
-      toast(err.message, 'error');[cite: 5]
-    } finally { btn.classList.remove('loading'); }[cite: 5]
+      toast(err.message, 'error');
+    } finally { if (btn) btn.classList.remove('loading'); }
   });
 }
 
-/* ── AI INSIGHT LAYER[cite: 3, 5] ─────────────────────────────── */
+/* ── AI INSIGHT LAYER ─────────────────────────────── */
 
 async function updateAIInsights(vitals) {
-  const summaryEl = document.getElementById('ai-summary');[cite: 4]
-  const statusEl  = document.getElementById('ai-status');[cite: 4]
-  const actionEl  = document.getElementById('ai-action');[cite: 4]
+  const summaryEl = document.getElementById('ai-summary');
+  const statusEl  = document.getElementById('ai-status');
+  const actionEl  = document.getElementById('ai-action');
   
-  if (!summaryEl) return;[cite: 5]
+  if (!summaryEl) return;
 
   if (!vitals || vitals.length === 0) {
-    summaryEl.textContent = "Log your first vitals to enable AI insights.";[cite: 3, 5]
-    statusEl.textContent = "Awaiting Data";[cite: 5]
-    actionEl.textContent = "Add Record";[cite: 5]
-    return;[cite: 5]
+    summaryEl.textContent = "Log your first vitals to enable AI insights.";
+    statusEl.textContent = "Awaiting Data";
+    actionEl.textContent = "Add Record";
+    return;
   }
 
-  const latest = vitals[vitals.length - 1];[cite: 3, 5]
-  let insight = "Your health metrics are stable. Keep going!";[cite: 3, 5]
-  let status  = "Optimal";[cite: 5]
-  let action  = "Continue Routine";[cite: 5]
+  const latest = vitals[vitals.length - 1];
+  let insight = "Your health metrics are stable. Keep going!";
+  let status  = "Optimal";
+  let action  = "Continue Routine";
 
   if (latest.bloodSugar > 140 || latest.bpSystolic > 130) {
-    insight = "Noticeable spike detected. Monitor sugar and BP closely.";[cite: 3, 5]
-    status  = "Warning";[cite: 5]
-    action  = "Track Daily";[cite: 5]
+    insight = "Noticeable spike detected. Monitor sugar and BP closely.";
+    status  = "Warning";
+    action  = "Track Daily";
   }
 
-  summaryEl.textContent = insight;[cite: 5]
-  statusEl.textContent  = status;[cite: 5]
-  actionEl.textContent  = action;[cite: 5]
+  summaryEl.textContent = insight;
+  statusEl.textContent  = status;
+  actionEl.textContent  = action;
 }
 
-/* ── CORE DATA LOADERS[cite: 5] ───────────────────────────────── */
+/* ── CORE DATA LOADERS ───────────────────────────────── */
 
 async function loadOverviewVitals() {
   try {
-    const records = await API.get('/health');[cite: 3, 5]
-    updateAIInsights(records);[cite: 3, 5]
-    const latest  = records[records.length - 1];[cite: 5]
-    if (!latest) return;[cite: 5]
-    setValue('ov-weight', latest.weight ? `${latest.weight}kg` : '—');[cite: 5]
-    setValue('ov-bp',     latest.bpSystolic ? `${latest.bpSystolic}/${latest.bpDiastolic}` : '—');[cite: 5]
-    setValue('ov-sugar',  latest.bloodSugar ? `${latest.bloodSugar}` : '—');[cite: 5]
-    setValue('ov-hr',     latest.heartRate ? `${latest.heartRate}` : '—');[cite: 5]
-  } catch(e) { console.warn(e); }[cite: 5]
+    const records = await API.get('/health');
+    updateAIInsights(records);
+    const latest  = records[records.length - 1];
+    if (!latest) return;
+    setValue('ov-weight', latest.weight ? `${latest.weight}kg` : '—');
+    setValue('ov-bp',     latest.bpSystolic ? `${latest.bpSystolic}/${latest.bpDiastolic}` : '—');
+    setValue('ov-sugar',  latest.bloodSugar ? `${latest.bloodSugar}` : '—');
+    setValue('ov-hr',     latest.heartRate ? `${latest.heartRate}` : '—');
+  } catch(e) { console.warn(e); }
 }
 
 async function loadHealthRecords() {
-  const container = document.getElementById('records-list');[cite: 4, 5]
-  if (!container) return;[cite: 5]
+  const container = document.getElementById('records-list');
+  if (!container) return;
   try {
-    const data = await API.get('/health');[cite: 3, 5]
-    updateAIInsights(data);[cite: 3, 5]
-    container.innerHTML = `<div class="tbl-wrap"><table>...</table></div>`; // Simplified render
-  } catch (err) { container.innerHTML = '⚠️ Load error'; }[cite: 5]
+    const data = await API.get('/health');
+    updateAIInsights(data);
+    if (!data.length) {
+      container.innerHTML = emptyState('📋', 'No health records yet', 'Log records to see your vitals and history.');
+      return;
+    }
+    container.innerHTML = `<div class="tbl-wrap"><table>
+      <thead><tr><th>Date</th><th>Weight</th><th>BP</th><th>Sugar</th><th>Heart Rate</th></tr></thead>
+      <tbody>${data.slice().reverse().map(r => `
+        <tr>
+          <td><strong>${fmtDate(r.date)}</strong></td>
+          <td>${r.weight ? `${r.weight}kg` : '—'}</td>
+          <td>${r.bpSystolic && r.bpDiastolic ? `${r.bpSystolic}/${r.bpDiastolic}` : '—'}</td>
+          <td>${r.bloodSugar ? `${r.bloodSugar} mg/dL` : '—'}</td>
+          <td>${r.heartRate ? `${r.heartRate} bpm` : '—'}</td>
+        </tr>`).join('')}
+      </tbody>
+    </table></div>`;
+  } catch (err) { container.innerHTML = '⚠️ Load error'; }
 }
 
-// ... [Remainder of standard patient dashboard functions] ...
+async function loadPatientStats() {
+  try {
+    const s = await API.get('/stats/patient');
+    setValue('kpi-upcoming', s.upcomingAppointments);
+    setValue('kpi-med-taken', `${s.medicinesTaken}/${s.medicinesTotal}`);
+    setValue('kpi-records', s.healthRecords);
+    setValue('kpi-prescriptions', s.prescriptions);
+  } catch (e) {
+    console.warn(e);
+  }
+}
 
-function setValue(id, val) { const el = document.getElementById(id); if (el) el.textContent = val ?? '—'; }[cite: 5]
+async function loadOverviewMedicines() {
+  try {
+    const meds = await API.get('/medicines');
+    const total = meds.length;
+    const taken = meds.filter(m => m.taken).length;
+    const percent = total ? Math.round((taken / total) * 100) : 0;
+
+    setValue('ov-med-label', total ? `${taken}/${total} taken` : 'No medicines scheduled');
+    const fill = document.getElementById('ov-med-fill');
+    if (fill) fill.style.width = `${percent}%`;
+    const listEl = document.getElementById('ov-med-list');
+    if (listEl) {
+      listEl.innerHTML = total
+        ? meds.slice(0, 4).map(m => `${esc(m.name)} ${m.dosage || ''} • ${esc(m.time || 'Anytime')}`).join('<br>')
+        : 'No medicines found for your plan.';
+    }
+  } catch (e) {
+    console.warn(e);
+  }
+}
+
+async function loadUpcomingAppointments() {
+  try {
+    const appts = await API.get('/appointments');
+    const upcoming = appts.filter(a => a.status !== 'cancelled').sort((a, b) => new Date(a.date) - new Date(b.date));
+    setValue('kpi-upcoming', upcoming.length);
+  } catch (e) {
+    console.warn(e);
+  }
+}
+
+async function loadAllAppointments() {
+  const container = document.getElementById('all-appts');
+  if (!container) return;
+  setLoading(container);
+  try {
+    const appts = await API.get('/appointments');
+    if (!appts.length) {
+      container.innerHTML = emptyState('📅', 'No appointments found', 'Book your first appointment to get started.');
+      return;
+    }
+    appts.sort((a, b) => new Date(b.date) - new Date(a.date));
+    container.innerHTML = `<div class="tbl-wrap"><table>
+      <thead><tr><th>Doctor</th><th>Date & Time</th><th>Reason</th><th>Status</th></tr></thead>
+      <tbody>${appts.map(a => patientApptRow(a)).join('')}</tbody>
+    </table></div>`;
+  } catch (e) {
+    container.innerHTML = emptyState('⚠️', 'Could not load appointments');
+  }
+}
+
+function patientApptRow(a) {
+  return `
+    <tr>
+      <td><strong>${esc(a.doctorName)}</strong><br><span style="font-size:12px;color:var(--text-muted)">${esc(a.specialization || 'General')}</span></td>
+      <td><strong>${fmtDate(a.date)}</strong><br><span style="font-size:12px;color:var(--text-muted)">${esc(a.time)}</span></td>
+      <td style="max-width:250px;font-size:13px">${esc(a.reason)}</td>
+      <td>${chipStatus(a.status)}</td>
+    </tr>`;
+}
+
+async function loadMedicines() {
+  await loadOverviewMedicines();
+}
+
+async function loadAnalytics() {
+  const container = document.getElementById('v-analytics');
+  if (container) container.innerHTML = `<div class="card"><div class="card-body">Analytics coming soon.</div></div>`;
+}
+
+async function loadProfile() {
+  const container = document.getElementById('v-profile');
+  if (container) container.innerHTML = `<div class="card"><div class="card-body">Profile settings are not configured yet.</div></div>`;
+}
+
+function wireAddMedicine() {}
+function wireAddRecord() {}
+function wireProfileForm() {}
+
+function setValue(id, val) { const el = document.getElementById(id); if (el) el.textContent = val ?? '—'; }

@@ -31,15 +31,31 @@ router.get('/', auth, (req, res) => {
 
 // POST /api/appointments
 router.post('/', auth, (req, res) => {
-  const { doctorId, date, time, reason, duration, priority } = req.body;
-  if (!doctorId || !date || !time || !reason)
-    return res.status(400).json({ error: 'doctorId, date, time, reason required' });
+  const { doctorId, doctorName, date, time, reason, duration, priority } = req.body;
+  if ((!doctorId && !doctorName) || !date || !time || !reason)
+    return res.status(400).json({ error: 'doctorId or doctorName, date, time, reason required' });
 
-  const doctor = db.get('users').find({ id: doctorId, role: 'doctor' }).value();
-  if (!doctor) return res.status(404).json({ error: 'Doctor not found' });
+  let doctor;
+  let resolvedDoctorId = doctorId;
+  let resolvedDoctorName = doctorName;
+  if (doctorId) {
+    doctor = db.get('users').find({ id: doctorId, role: 'doctor' }).value();
+    if (doctor) resolvedDoctorName = doctor.name;
+  } else {
+    const normalizedName = doctorName ? doctorName.trim().toLowerCase() : '';
+    doctor = db.get('users').find(user => user.role === 'doctor' && user.name.toLowerCase() === normalizedName).value();
+    if (doctor) resolvedDoctorId = doctor.id;
+  }
+
+  // Allow manual doctor name entry when the user typed a name that does not match a registered doctor
+  const doctorLookupFailed = !doctor && doctorName && !doctorId;
+  if (doctorId && !doctor) return res.status(404).json({ error: 'Doctor not found' });
 
   // Conflict check
-  const conflict = db.get('appointments').find({ doctorId, date, time, status: 'confirmed' }).value();
+  const conflictQuery = doctorId ? { doctorId: resolvedDoctorId, date, time, status: 'confirmed' } : { date, time, status: 'confirmed' };
+  const conflict = doctorId
+    ? db.get('appointments').find(conflictQuery).value()
+    : db.get('appointments').find(a => a.date === date && a.time === time && a.status === 'confirmed' && a.doctorName === resolvedDoctorName).value();
   if (conflict) return res.status(409).json({ error: 'Doctor has another confirmed appointment at this time' });
 
   let patientId = req.user.id;
@@ -52,10 +68,19 @@ router.post('/', auth, (req, res) => {
   }
 
   const appt = {
-    id: uuidv4(), patientId, patientName, doctorId,
-    doctorName: doctor.name, specialization: doctor.specialization || '',
-    date, time, duration: duration || 30, reason,
-    status: 'pending', priority: priority || 'normal', notes: '',
+    id: uuidv4(),
+    patientId,
+    patientName,
+    doctorId: resolvedDoctorId || null,
+    doctorName: resolvedDoctorName || (doctor ? doctor.name : ''),
+    specialization: doctor ? doctor.specialization || '' : '',
+    date,
+    time,
+    duration: duration || 30,
+    reason,
+    status: 'pending',
+    priority: priority || 'normal',
+    notes: '',
     createdAt: new Date().toISOString().split('T')[0]
   };
 

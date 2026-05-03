@@ -4,16 +4,26 @@ const { v4: uuidv4 } = require('uuid');
 const db = require('../db');
 const { auth, requireRole } = require('../middleware/auth');
 
-// GET /api/users – admin gets all, doctor gets patients
+// GET /api/users – admin gets all, doctor gets patients, patient gets doctor directory
 router.get('/', auth, (req, res) => {
   let users = db.get('users').value();
   const { role, search, status } = req.query;
 
   if (req.user.role === 'doctor') {
-    // Doctors can only see patients assigned to them
-    const appts = db.get('appointments').filter({ doctorId: req.user.id }).value();
-    const patientIds = [...new Set(appts.map(a => a.patientId))];
-    users = users.filter(u => u.role === 'patient' && patientIds.includes(u.id));
+    if (role === 'doctor') {
+      users = users.filter(u => u.role === 'doctor');
+    } else {
+      // Doctors can only see patients assigned to them
+      const appts = db.get('appointments').filter({ doctorId: req.user.id }).value();
+      const patientIds = [...new Set(appts.map(a => a.patientId))];
+      users = users.filter(u => u.role === 'patient' && patientIds.includes(u.id));
+    }
+  } else if (req.user.role === 'patient') {
+    if (role === 'doctor') {
+      users = users.filter(u => u.role === 'doctor');
+    } else {
+      return res.status(403).json({ error: 'Access denied' });
+    }
   } else if (req.user.role !== 'admin') {
     return res.status(403).json({ error: 'Access denied' });
   }

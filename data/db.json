@@ -47,7 +47,24 @@
       "createdAt": "2026-05-03"
     }
   ],
-  "appointments": [],
+  "appointments": [
+    {
+      "id": "edb6922f-b799-41d4-95db-5be9032f4597",
+      "patientId": "9fe69134-d1fe-4366-b867-59d0fe2be9bc",
+      "patientName": "anurag",
+      "doctorId": null,
+      "doctorName": "Priya",
+      "specialization": "",
+      "date": "2026-05-03",
+      "time": "10:00",
+      "duration": 30,
+      "reason": "gsgdgdayra",
+      "status": "pending",
+      "priority": "normal",
+      "notes": "",
+      "createdAt": "2026-05-03"
+    }
+  ],
   "healthRecords": [],
   "prescriptions": [],
   "medicines": [],
