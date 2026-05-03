@@ -1,8 +1,3 @@
-/**
- * HealthMS – Full Stack Health Management System
- * Backend: Express.js + JSON file-based DB (lowdb)
- */
-
 const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
@@ -19,18 +14,16 @@ const medicineRoutes = require('./routes/medicines');
 const statsRoutes = require('./routes/stats');
 
 const app = express();
-
-// 1. Render assigns a dynamic port; 10000 is a safe default for local
 const PORT = process.env.PORT || 10000;
 
-// ── Security & Middleware ──────────────────────────────────────────
+// Security & Middleware
 app.use(helmet({ contentSecurityPolicy: false })); 
-app.use(cors()); // Simplified for better compatibility on Render[cite: 1]
+app.use(cors()); 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(morgan('dev'));
 
-// ── API Routes ────────────────────────────────────────────────────
+// API Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/appointments', appointmentRoutes);
@@ -39,19 +32,15 @@ app.use('/api/prescriptions', prescriptionRoutes);
 app.use('/api/medicines', medicineRoutes);
 app.use('/api/stats', statsRoutes);
 
-// Health Check for Render uptime monitoring
-app.get('/api/ping', (req, res) => res.json({ status: 'ok', time: new Date().toISOString() }));
-
-// ── Static files & SPA Fallback ──────────────────────────────────
-// Serve static assets from public folder[cite: 3]
+// Static files & SPA Fallback
 app.use(express.static(path.join(__dirname, '../public')));
 
-// Standard SPA fallback: Any request not matching an API route serves index.html[cite: 3]
+// This MUST be the last route
 app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, '../public/index.html'));
 });
 
-// ── Error Handler ─────────────────────────────────────────────────
+// Error Handler
 app.use((err, req, res, next) => {
   console.error(err.stack);
   res.status(err.status || 500).json({ error: err.message || 'Internal Server Error' });
@@ -59,7 +48,6 @@ app.use((err, req, res, next) => {
 
 app.listen(PORT, () => {
   console.log(`🚀 HealthMS Server running on port ${PORT}`);
-  console.log(`🏠 Mode: ${process.env.NODE_ENV || 'development'}`);
 });
 
 module.exports = app;
