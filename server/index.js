@@ -9,6 +9,7 @@ const helmet = require('helmet');
 const morgan = require('morgan');
 const path = require('path');
 
+// Route Imports
 const authRoutes = require('./routes/auth');
 const userRoutes = require('./routes/users');
 const appointmentRoutes = require('./routes/appointments');
@@ -18,17 +19,16 @@ const medicineRoutes = require('./routes/medicines');
 const statsRoutes = require('./routes/stats');
 
 const app = express();
-const PORT = process.env.PORT || 3000;
+
+// 1. Render assigns a dynamic port; 10000 is a safe default for local
+const PORT = process.env.PORT || 10000;
 
 // ── Security & Middleware ──────────────────────────────────────────
-app.use(helmet({ contentSecurityPolicy: false })); // CSP off for CDN assets
-app.use(cors({ origin: '*', credentials: true }));
+app.use(helmet({ contentSecurityPolicy: false })); 
+app.use(cors()); // Simplified for better compatibility on Render[cite: 1]
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(morgan('dev'));
-
-// ── Static files ──────────────────────────────────────────────────
-app.use(express.static(path.join(__dirname, '../public')));
 
 // ── API Routes ────────────────────────────────────────────────────
 app.use('/api/auth', authRoutes);
@@ -39,11 +39,15 @@ app.use('/api/prescriptions', prescriptionRoutes);
 app.use('/api/medicines', medicineRoutes);
 app.use('/api/stats', statsRoutes);
 
-// ── Health Check ─────────────────────────────────────────────────
+// Health Check for Render uptime monitoring
 app.get('/api/ping', (req, res) => res.json({ status: 'ok', time: new Date().toISOString() }));
 
-// ── SPA Fallback ──────────────────────────────────────────────────
-app.get('/{*path}', (req, res) => {
+// ── Static files & SPA Fallback ──────────────────────────────────
+// Serve static assets from public folder[cite: 3]
+app.use(express.static(path.join(__dirname, '../public')));
+
+// Standard SPA fallback: Any request not matching an API route serves index.html[cite: 3]
+app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, '../public/index.html'));
 });
 
@@ -54,8 +58,8 @@ app.use((err, req, res, next) => {
 });
 
 app.listen(PORT, () => {
-  console.log(`\n🏥 HealthMS Server running at http://localhost:${PORT}`);
-  console.log(`   API base: http://localhost:${PORT}/api\n`);
+  console.log(`🚀 HealthMS Server running on port ${PORT}`);
+  console.log(`🏠 Mode: ${process.env.NODE_ENV || 'development'}`);
 });
 
 module.exports = app;
