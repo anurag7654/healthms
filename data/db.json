@@ -1,0 +1,55 @@
+{
+  "users": [
+    {
+      "id": "3050bec3-c739-42dc-b733-0ffd338e8a18",
+      "username": "admin",
+      "password": "$2a$10$NooNBBIgLt5ERm/zuEcheuCqxOulNUyZCZjqrkehPkwr5FLlvRTK.",
+      "role": "admin",
+      "name": "System Administrator",
+      "email": "admin@healthms.com",
+      "phone": "",
+      "avatar": null,
+      "status": "active",
+      "createdAt": "2026-04-18"
+    },
+    {
+      "id": "46037b1e-9a44-44d8-ac42-b6f6fcdad0b9",
+      "username": "anand12",
+      "password": "$2a$10$uspicIxKj11xDDvhsojhyOJXxmPHHKYrc.SkeYi3Y8ckk3YsLzupi",
+      "role": "patient",
+      "name": "anand",
+      "email": "anandsharma7477@gmail.com",
+      "phone": "9250847477",
+      "age": "22",
+      "gender": "Male",
+      "bloodGroup": "A-",
+      "address": "",
+      "emergencyContact": "",
+      "avatar": null,
+      "status": "active",
+      "createdAt": "2026-04-18"
+    },
+    {
+      "id": "9fe69134-d1fe-4366-b867-59d0fe2be9bc",
+      "username": "anurag",
+      "password": "$2a$10$/ACKRQSEffe.VxQJTLBtAufp1cYO1UrFKfm1fvDaYoRtZaWgg3g9e",
+      "role": "patient",
+      "name": "anurag",
+      "email": "anurag@gmail.com",
+      "phone": "7654415392",
+      "age": "21",
+      "gender": "Male",
+      "bloodGroup": "O+",
+      "address": "",
+      "emergencyContact": "",
+      "avatar": null,
+      "status": "active",
+      "createdAt": "2026-05-03"
+    }
+  ],
+  "appointments": [],
+  "healthRecords": [],
+  "prescriptions": [],
+  "medicines": [],
+  "notifications": []
+}

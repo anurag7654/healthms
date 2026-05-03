@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Doctor Dashboard — HealthMS</title>
+  <link rel="stylesheet" href="/css/app.css">
+</head>
+<body>
+<div id="toast-root"></div>
+<div class="mob-overlay"></div>
+<div class="app">
+
+<!-- ══ SIDEBAR ══════════════════════════════════════════════════ -->
+<aside class="sidebar">
+  <div class="sidebar-logo-area">
+    <div class="sidebar-logo-icon">🏥</div>
+    <div class="sidebar-logo-text">
+      <span class="name">HealthMS</span><span class="sub">Doctor Portal</span>
+    </div>
+  </div>
+  <div class="sidebar-profile">
+    <div class="sidebar-avatar green" id="sb-avatar">D</div>
+    <div class="sidebar-profile-info">
+      <div class="pname" id="sb-name">Doctor</div>
+      <div class="prole" id="sb-role">Specialist</div>
+    </div>
+  </div>
+  <nav class="sidebar-nav">
+    <div class="nav-section">Dashboard</div>
+    <div class="nav-link active" data-view="overview"><div class="nav-icon-wrap">🏠</div><span class="nav-label">Overview</span></div>
+    <div class="nav-link" data-view="appointments"><div class="nav-icon-wrap">📅</div><span class="nav-label">Appointments</span></div>
+    <div class="nav-link" data-view="patients"><div class="nav-icon-wrap">👥</div><span class="nav-label">My Patients</span></div>
+    <div class="nav-link" data-view="prescriptions"><div class="nav-icon-wrap">📋</div><span class="nav-label">Prescriptions</span></div>
+  </nav>
+  <div class="sidebar-bottom">
+    <div class="theme-switch theme-toggle-btn">
+      <span>🌙</span><span style="flex:1">Dark Mode</span>
+      <div class="sw-track"><div class="sw-knob"></div></div>
+    </div>
+    <button class="sidebar-action danger" id="logout-btn"><span>🚪</span><span>Sign Out</span></button>
+  </div>
+</aside>
+
+<!-- ══ MAIN ══════════════════════════════════════════════════════ -->
+<div class="main">
+  <header class="topbar">
+    <button class="topbar-icon-btn hamburger" style="display:none">☰</button>
+    <div class="topbar-title" id="topbar-title">Overview</div>
+    <div class="topbar-actions">
+      <div class="topbar-icon-btn" title="Notifications">🔔<div class="topbar-dot"></div></div>
+    </div>
+  </header>
+
+  <div class="page">
+
+  <!-- ── OVERVIEW ──────────────────────────────────────────────── -->
+  <div class="view active" id="v-overview">
+    <div class="page-header">
+      <div class="page-header-text"><h2>Doctor Overview</h2><p>Your practice at a glance</p></div>
+    </div>
+
+    <div class="kpi-grid">
+      <div class="kpi-card blue"><div class="kpi-top"><div class="kpi-icon">👥</div></div><div class="kpi-value" id="doc-kpi-patients">—</div><div class="kpi-label">Total Patients</div></div>
+      <div class="kpi-card green"><div class="kpi-top"><div class="kpi-icon">✅</div></div><div class="kpi-value" id="doc-kpi-completed">—</div><div class="kpi-label">Completed Visits</div></div>
+      <div class="kpi-card teal"><div class="kpi-top"><div class="kpi-icon">🕐</div></div><div class="kpi-value" id="doc-kpi-today">—</div><div class="kpi-label">Today's Appointments</div></div>
+      <div class="kpi-card amber"><div class="kpi-top"><div class="kpi-icon">⏳</div></div><div class="kpi-value" id="doc-kpi-pending">—</div><div class="kpi-label">Pending Approvals</div></div>
+      <div class="kpi-card violet"><div class="kpi-top"><div class="kpi-icon">📅</div></div><div class="kpi-value" id="doc-kpi-total-appts">—</div><div class="kpi-label">Total Appointments</div></div>
+      <div class="kpi-card teal"><div class="kpi-top"><div class="kpi-icon">📋</div></div><div class="kpi-value" id="doc-kpi-rx">—</div><div class="kpi-label">Prescriptions Given</div></div>
+    </div>
+
+    <div class="card">
+      <div class="card-head">
+        <div class="card-title">📅 Recent Appointments</div>
+        <button class="btn btn-ghost btn-sm" onclick="navigateTo('appointments')">View all →</button>
+      </div>
+      <div class="card-body p0" id="doc-recent-appts"></div>
+    </div>
+  </div>
+
+  <!-- ── APPOINTMENTS ───────────────────────────────────────────── -->
+  <div class="view" id="v-appointments">
+    <div class="page-header">
+      <div class="page-header-text"><h2>Appointments</h2><p>Manage all your patient appointments</p></div>
+    </div>
+    <div class="card">
+      <div class="filter-bar">
+        <div class="search-input">
+          <span class="si-icon">🔍</span>
+          <input type="text" id="doc-appt-search" placeholder="Search by patient name or reason…" oninput="loadDoctorAllAppointments()">
+        </div>
+        <select class="filter-select" id="doc-appt-filter" onchange="loadDoctorAllAppointments()">
+          <option value="all">All Status</option>
+          <option value="pending">Pending</option>
+          <option value="confirmed">Confirmed</option>
+          <option value="completed">Completed</option>
+          <option value="cancelled">Cancelled</option>
+        </select>
+      </div>
+      <div class="card-body p0" id="doc-all-appts"></div>
+    </div>
+  </div>
+
+  <!-- ── PATIENTS ───────────────────────────────────────────────── -->
+  <div class="view" id="v-patients">
+    <div class="page-header">
+      <div class="page-header-text"><h2>My Patients</h2><p>Patients assigned to you via appointments</p></div>
+    </div>
+    <div class="card">
+      <div class="filter-bar">
+        <div class="search-input">
+          <span class="si-icon">🔍</span>
+          <input type="text" id="doc-pat-search" placeholder="Search by name or blood group…" oninput="loadDoctorPatients()">
+        </div>
+      </div>
+      <div class="card-body p0" id="doc-patients-list"></div>
+    </div>
+  </div>
+
+  <!-- ── PRESCRIPTIONS ─────────────────────────────────────────── -->
+  <div class="view" id="v-prescriptions">
+    <div class="page-header">
+      <div class="page-header-text"><h2>Prescriptions</h2><p>All prescriptions you've written</p></div>
+    </div>
+    <div id="doc-rx-list"></div>
+  </div>
+
+  </div><!-- /page -->
+</div>
+
+</div><!-- /app -->
+
+<!-- ══ MODALS ════════════════════════════════════════════════════ -->
+
+<!-- Add Note -->
+<div class="modal-backdrop" id="modal-add-note">
+  <div class="modal narrow">
+    <div class="modal-head"><h3>📝 Clinical Note</h3><button class="modal-close-btn">✕</button></div>
+    <div class="modal-body">
+      <form id="form-add-note">
+        <input type="hidden" id="note-appt-id">
+        <div class="field-group"><label>Notes / Observations</label>
+          <textarea class="field-raw" id="note-text" placeholder="Enter clinical observations, instructions, or follow-up notes…" style="min-height:120px"></textarea>
+        </div>
+      </form>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" data-close>Cancel</button>
+      <button class="btn btn-primary" type="submit" form="form-add-note">Save Note</button>
+    </div>
+  </div>
+</div>
+
+<!-- Patient Detail -->
+<div class="modal-backdrop" id="modal-patient-detail">
+  <div class="modal wide">
+    <div class="modal-head"><h3>👤 Patient Health Summary</h3><button class="modal-close-btn">✕</button></div>
+    <div class="modal-body" id="patient-detail-body"></div>
+  </div>
+</div>
+
+<!-- Add Prescription -->
+<div class="modal-backdrop" id="modal-prescribe">
+  <div class="modal wide">
+    <div class="modal-head"><h3>📋 Write Prescription</h3><button class="modal-close-btn">✕</button></div>
+    <div class="modal-body">
+      <form id="form-prescribe">
+        <input type="hidden" id="rx-patient-id">
+        <div class="alert-banner info" style="margin-bottom:16px">
+          <span>👤</span><div>Prescribing for: <strong id="rx-patient-name">—</strong></div>
+        </div>
+        <div class="field-group"><label>Diagnosis *</label>
+          <input class="field-raw" id="rx-diagnosis" placeholder="e.g. Hypertension Stage 1, Type 2 Diabetes" required>
+        </div>
+        <div class="field-group">
+          <label>Medicines *</label>
+          <div style="display:grid;grid-template-columns:2fr 1fr 1.5fr 1fr;gap:6px;margin-bottom:6px">
+            <span style="font-size:11px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:.05em">Name</span>
+            <span style="font-size:11px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:.05em">Dosage</span>
+            <span style="font-size:11px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:.05em">Frequency</span>
+            <span style="font-size:11px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:.05em">Duration</span>
+          </div>
+          <div id="rx-med-rows"></div>
+          <button type="button" class="btn btn-ghost btn-sm" id="btn-add-rx-med" style="margin-top:8px">+ Add Another Medicine</button>
+        </div>
+        <div class="form-row">
+          <div class="field-group"><label>Advice / Instructions</label>
+            <textarea class="field-raw" id="rx-advice" placeholder="Dietary advice, lifestyle changes, precautions…"></textarea>
+          </div>
+          <div class="field-group"><label>Follow-Up Date</label>
+            <input class="field-raw" id="rx-followup" type="date">
+          </div>
+        </div>
+      </form>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" data-close>Cancel</button>
+      <button class="btn btn-primary" type="submit" form="form-prescribe">Save Prescription</button>
+    </div>
+  </div>
+</div>
+
+<script src="/js/core.js"></script>
+<script src="/js/doctor.js"></script>
+<script>
+  document.addEventListener('DOMContentLoaded', () => {
+    if (!Session.valid() || Session.user()?.role !== 'doctor') { window.location.href = '/'; return; }
+    initDoctor();
+  });
+</script>
+</body>
+</html>

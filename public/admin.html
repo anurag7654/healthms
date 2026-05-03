@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin Dashboard — HealthMS</title>
+  <link rel="stylesheet" href="/css/app.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js" defer></script>
+</head>
+<body>
+<div id="toast-root"></div>
+<div class="mob-overlay"></div>
+<div class="app">
+
+<!-- ══ SIDEBAR ══════════════════════════════════════════════════ -->
+<aside class="sidebar">
+  <div class="sidebar-logo-area">
+    <div class="sidebar-logo-icon">🏥</div>
+    <div class="sidebar-logo-text">
+      <span class="name">HealthMS</span><span class="sub">Admin Console</span>
+    </div>
+  </div>
+  <div class="sidebar-profile">
+    <div class="sidebar-avatar violet" id="sb-avatar">A</div>
+    <div class="sidebar-profile-info">
+      <div class="pname" id="sb-name">Admin</div>
+      <div class="prole" id="sb-role">Administrator</div>
+    </div>
+  </div>
+  <nav class="sidebar-nav">
+    <div class="nav-section">Management</div>
+    <div class="nav-link active" data-view="overview"><div class="nav-icon-wrap">🏠</div><span class="nav-label">Overview</span></div>
+    <div class="nav-link" data-view="users"><div class="nav-icon-wrap">👥</div><span class="nav-label">User Management</span></div>
+    <div class="nav-link" data-view="appointments"><div class="nav-icon-wrap">📅</div><span class="nav-label">All Appointments</span></div>
+  </nav>
+  <div class="sidebar-bottom">
+    <div class="theme-switch theme-toggle-btn">
+      <span>🌙</span><span style="flex:1">Dark Mode</span>
+      <div class="sw-track"><div class="sw-knob"></div></div>
+    </div>
+    <button class="sidebar-action danger" id="logout-btn"><span>🚪</span><span>Sign Out</span></button>
+  </div>
+</aside>
+
+<!-- ══ MAIN ══════════════════════════════════════════════════════ -->
+<div class="main">
+  <header class="topbar">
+    <button class="topbar-icon-btn hamburger" style="display:none">☰</button>
+    <div class="topbar-title" id="topbar-title">Overview</div>
+    <div class="topbar-actions">
+      <button class="btn btn-primary btn-sm" onclick="navigateTo('users'); loadAdminUsers()">+ Add User</button>
+    </div>
+  </header>
+
+  <div class="page">
+
+  <!-- ── OVERVIEW ──────────────────────────────────────────────── -->
+  <div class="view active" id="v-overview">
+    <div class="page-header">
+      <div class="page-header-text"><h2>System Overview</h2><p>Platform-wide statistics and analytics</p></div>
+    </div>
+
+    <div class="kpi-grid">
+      <div class="kpi-card blue"><div class="kpi-top"><div class="kpi-icon">🧑‍💼</div><span class="kpi-change up">Registered</span></div><div class="kpi-value" id="adm-kpi-patients">—</div><div class="kpi-label">Total Patients</div></div>
+      <div class="kpi-card green"><div class="kpi-top"><div class="kpi-icon">👨‍⚕️</div><span class="kpi-change neutral">Active</span></div><div class="kpi-value" id="adm-kpi-doctors">—</div><div class="kpi-label">Total Doctors</div></div>
+      <div class="kpi-card violet"><div class="kpi-top"><div class="kpi-icon">📅</div></div><div class="kpi-value" id="adm-kpi-appts">—</div><div class="kpi-label">Total Appointments</div></div>
+      <div class="kpi-card teal"><div class="kpi-top"><div class="kpi-icon">🕐</div></div><div class="kpi-value" id="adm-kpi-today">—</div><div class="kpi-label">Today's Appointments</div></div>
+      <div class="kpi-card amber"><div class="kpi-top"><div class="kpi-icon">⏳</div><span class="kpi-change down">Action needed</span></div><div class="kpi-value" id="adm-kpi-pending">—</div><div class="kpi-label">Pending Approvals</div></div>
+      <div class="kpi-card blue"><div class="kpi-top"><div class="kpi-icon">📋</div></div><div class="kpi-value" id="adm-kpi-records">—</div><div class="kpi-label">Health Records</div></div>
+    </div>
+
+    <div class="grid-2 mb-5">
+      <div class="card">
+        <div class="card-head"><div class="card-title">👥 User Distribution</div></div>
+        <div class="card-body"><div class="chart-box"><canvas id="adm-chart-users"></canvas></div></div>
+      </div>
+      <div class="card">
+        <div class="card-head"><div class="card-title">📅 Appointment Status Breakdown</div></div>
+        <div class="card-body"><div class="chart-box"><canvas id="adm-chart-appts"></canvas></div></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-head"><div class="card-title">📈 7-Day Appointment Trend</div></div>
+      <div class="card-body"><div class="chart-box"><canvas id="adm-chart-trend"></canvas></div></div>
+    </div>
+  </div>
+
+  <!-- ── USERS ─────────────────────────────────────────────────── -->
+  <div class="view" id="v-users">
+    <div class="page-header">
+      <div class="page-header-text"><h2>User Management</h2><p>Add, edit, and manage all system users</p></div>
+      <div class="page-header-actions">
+        <button class="btn btn-primary" id="btn-add-user">+ Add User</button>
+      </div>
+    </div>
+    <div class="card">
+      <div class="filter-bar">
+        <div class="search-input">
+          <span class="si-icon">🔍</span>
+          <input type="text" id="adm-user-search" placeholder="Search by name, username or email…" oninput="loadAdminUsers()">
+        </div>
+        <select class="filter-select" id="adm-user-role-filter" onchange="loadAdminUsers()">
+          <option value="all">All Roles</option>
+          <option value="patient">Patients</option>
+          <option value="doctor">Doctors</option>
+          <option value="admin">Admins</option>
+        </select>
+      </div>
+      <div class="card-body p0" id="adm-users-list"></div>
+    </div>
+  </div>
+
+  <!-- ── APPOINTMENTS ───────────────────────────────────────────── -->
+  <div class="view" id="v-appointments">
+    <div class="page-header">
+      <div class="page-header-text"><h2>All Appointments</h2><p>System-wide appointment management</p></div>
+    </div>
+    <div class="card">
+      <div class="filter-bar">
+        <div class="search-input">
+          <span class="si-icon">🔍</span>
+          <input type="text" id="adm-appt-search" placeholder="Search by patient, doctor, or reason…" oninput="loadAdminAppointments()">
+        </div>
+        <select class="filter-select" id="adm-appt-filter" onchange="loadAdminAppointments()">
+          <option value="all">All Status</option>
+          <option value="pending">Pending</option>
+          <option value="confirmed">Confirmed</option>
+          <option value="completed">Completed</option>
+          <option value="cancelled">Cancelled</option>
+        </select>
+      </div>
+      <div class="card-body p0" id="adm-appts-list"></div>
+    </div>
+  </div>
+
+  </div><!-- /page -->
+</div>
+</div><!-- /app -->
+
+<!-- ══ MODALS ════════════════════════════════════════════════════ -->
+
+<!-- Add User -->
+<div class="modal-backdrop" id="modal-add-user">
+  <div class="modal wide">
+    <div class="modal-head"><h3>➕ Add New User</h3><button class="modal-close-btn">✕</button></div>
+    <div class="modal-body">
+      <form id="form-add-user">
+        <div class="form-row">
+          <div class="field-group"><label>Full Name *</label><input class="field-raw" id="new-user-name" placeholder="e.g. Dr. Priya Sharma" required></div>
+          <div class="field-group"><label>Role *</label>
+            <select class="field-raw" id="new-user-role" required>
+              <option value="patient">Patient</option>
+              <option value="doctor">Doctor</option>
+              <option value="admin">Admin</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="field-group"><label>Username *</label><input class="field-raw" id="new-user-username" placeholder="Unique login username" required></div>
+          <div class="field-group"><label>Password *</label><input class="field-raw" id="new-user-password" type="password" placeholder="Min. 6 characters" required minlength="6"></div>
+        </div>
+        <div class="form-row">
+          <div class="field-group"><label>Email</label><input class="field-raw" id="new-user-email" type="email" placeholder="user@example.com"></div>
+          <div class="field-group"><label>Phone</label><input class="field-raw" id="new-user-phone" placeholder="+1 (555) 000-0000"></div>
+        </div>
+        <!-- Doctor fields -->
+        <div class="form-row" id="spec-row" style="display:none">
+          <div class="field-group"><label>Specialization</label><input class="field-raw" id="new-user-spec" placeholder="e.g. Cardiology, Neurology"></div>
+          <div class="field-group"><label>Qualification</label><input class="field-raw" id="new-user-qual" placeholder="e.g. MD, MBBS, PhD"></div>
+        </div>
+        <!-- Patient fields -->
+        <div class="form-row" id="age-row" style="display:none">
+          <div class="field-group"><label>Age</label><input class="field-raw" id="new-user-age" type="number" placeholder="Age" min="1" max="120"></div>
+          <div class="field-group"><label>Blood Group</label>
+            <select class="field-raw" id="new-user-bg">
+              <option value="">Select…</option>
+              <option>A+</option><option>A-</option><option>B+</option><option>B-</option>
+              <option>O+</option><option>O-</option><option>AB+</option><option>AB-</option>
+            </select>
+          </div>
+        </div>
+      </form>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" data-close>Cancel</button>
+      <button class="btn btn-primary" type="submit" form="form-add-user">Create User</button>
+    </div>
+  </div>
+</div>
+
+<!-- Edit User -->
+<div class="modal-backdrop" id="modal-edit-user">
+  <div class="modal">
+    <div class="modal-head"><h3>✏️ Edit User</h3><button class="modal-close-btn">✕</button></div>
+    <div class="modal-body">
+      <form id="form-edit-user">
+        <input type="hidden" id="edit-user-id">
+        <div class="field-group"><label>Full Name</label><input class="field-raw" id="edit-user-name"></div>
+        <div class="form-row">
+          <div class="field-group"><label>Email</label><input class="field-raw" id="edit-user-email" type="email"></div>
+          <div class="field-group"><label>Phone</label><input class="field-raw" id="edit-user-phone"></div>
+        </div>
+        <div class="form-row">
+          <div class="field-group"><label>Specialization</label><input class="field-raw" id="edit-user-spec" placeholder="For doctors only"></div>
+          <div class="field-group"><label>Account Status</label>
+            <select class="field-raw" id="edit-user-status">
+              <option value="active">Active</option>
+              <option value="inactive">Inactive / Suspended</option>
+            </select>
+          </div>
+        </div>
+      </form>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" data-close>Cancel</button>
+      <button class="btn btn-primary" type="submit" form="form-edit-user">Save Changes</button>
+    </div>
+  </div>
+</div>
+
+<script src="/js/core.js"></script>
+<script src="/js/admin.js"></script>
+<script>
+  document.addEventListener('DOMContentLoaded', () => {
+    if (!Session.valid() || Session.user()?.role !== 'admin') { window.location.href = '/'; return; }
+    initAdmin();
+  });
+</script>
+</body>
+</html>
